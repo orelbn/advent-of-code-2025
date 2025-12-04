@@ -1,0 +1,17 @@
+# Advent of Code inputs (per AoC guidelines, don't share)
+*.input.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
