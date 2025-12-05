@@ -4,7 +4,6 @@ Find fresh ingredients by checking if IDs fall within given ranges.
 """
 
 import bisect
-from collections.abc import Generator
 
 
 def parse_input(data: str) -> list[str]:
@@ -36,21 +35,6 @@ def structure_data(parsed: list[str]) -> tuple[list[str], list[str]]:
     ranges = parsed[:separator_idx]
     ingredients = parsed[separator_idx + 1 :]
     return ranges, ingredients
-
-
-def ranges_to_pairs(ranges: list[str]) -> Generator[tuple[int, int], None, None]:
-    """
-    Converts range strings to (start, end) integer tuples.
-
-    Args:
-        ranges: List of range strings in 'start-end' format (e.g., '3-5').
-
-    Yields:
-        Tuples of (start, end) integers for each range.
-    """
-    for rng in ranges:
-        low, high = rng.split("-")
-        yield int(low), int(high)
 
 
 def interval_merge(sorted_ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -129,7 +113,9 @@ def main():
     parsed = parse_input(data)
     ranges, ingredients = structure_data(parsed)
 
-    range_pairs = sorted(ranges_to_pairs(ranges))
+    range_pairs = sorted(
+        (int(low), int(high)) for rng in ranges for low, high in [rng.split("-")]
+    )
     merged_ranges = interval_merge(range_pairs)
     ingredient_ids = [int(ing) for ing in ingredients]
 
