@@ -3,8 +3,6 @@ Advent of Code 2025 - Day 3: Lobby
 Power the escalator by finding maximum joltage from battery banks.
 """
 
-from bisect import bisect_right
-
 
 def parse_input(data: str) -> list[str]:
     """
@@ -24,6 +22,9 @@ def max_joltage(battery_bank: str, num_batteries: int) -> int:
     Finds the largest number that can be formed by selecting `num_batteries` digits
     from the battery bank while maintaining their original order.
 
+    Uses a greedy linear scan approach: for each position in the result, find the
+    highest digit that leaves enough remaining digits to complete the selection.
+
     Args:
         battery_bank: String of digits representing battery joltages.
         num_batteries: Number of batteries (digits) to select.
@@ -32,13 +33,6 @@ def max_joltage(battery_bank: str, num_batteries: int) -> int:
         The largest number that can be formed.
     """
     n = len(battery_bank)
-
-    # digit_indices[d] = list of indices where digit d appears
-    # Index 9 = digit 9, Index 8 = digit 8, etc.
-    digit_indices: list[list[int]] = [[] for _ in range(10)]
-    for i, d in enumerate(battery_bank):
-        digit_indices[int(d)].append(i)
-
     result = 0
     last_index = -1
 
@@ -46,22 +40,19 @@ def max_joltage(battery_bank: str, num_batteries: int) -> int:
         digits_remaining = num_batteries - i
         max_valid_index = n - digits_remaining
 
-        # Remove exhausted digit lists from the end (last index <= last_index)
-        while digit_indices and (
-            not digit_indices[-1] or digit_indices[-1][-1] <= last_index
-        ):
-            digit_indices.pop()
+        best_digit = -1
+        best_index = -1
 
-        # Find highest digit with valid index
-        digit = len(digit_indices) - 1
-        while digit >= 0:
-            indices = digit_indices[digit]
-            pos = bisect_right(indices, last_index)
-            if pos < len(indices) and indices[pos] <= max_valid_index:
-                result = result * 10 + digit
-                last_index = indices[pos]
-                break
-            digit -= 1
+        for j in range(last_index + 1, max_valid_index + 1):
+            digit = int(battery_bank[j])
+            if digit > best_digit:
+                best_digit = digit
+                best_index = j
+                if digit == 9:
+                    break
+
+        result = result * 10 + best_digit
+        last_index = best_index
 
     return result
 
