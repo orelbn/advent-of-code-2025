@@ -3,7 +3,7 @@ Advent of Code 2025 - Day X
 """
 
 
-def parse_input(data: str):
+def parse_input(data: str) -> list[str]:
     """
     Parses the raw input data.
 
