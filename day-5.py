@@ -3,6 +3,7 @@ Advent of Code 2025 - Day 5: Cafeteria
 Find fresh ingredients by checking if IDs fall within given ranges.
 """
 
+import bisect
 from collections.abc import Generator
 
 
@@ -74,42 +75,50 @@ def interval_merge(sorted_ranges: list[tuple[int, int]]) -> list[tuple[int, int]
     return merged
 
 
-def solve_part1(ranges: list[str], ingredients: list[str]) -> int:
+def is_in_ranges(value: int, merged_ranges: list[tuple[int, int]]) -> bool:
+    """
+    Checks if a value falls within any of the merged ranges using binary search.
+
+    Args:
+        value: The integer value to check.
+        merged_ranges: Sorted, non-overlapping list of (start, end) tuples.
+
+    Returns:
+        True if value is within any range, False otherwise.
+    """
+    # Find the rightmost range where start <= value
+    idx = bisect.bisect_right(merged_ranges, (value, float("inf"))) - 1
+    if idx >= 0:
+        start, end = merged_ranges[idx]
+        return start <= value <= end
+    return False
+
+
+def solve_part1(merged_ranges: list[tuple[int, int]], ingredients: list[int]) -> int:
     """
     Counts how many ingredient IDs are fresh (fall within any range).
 
     Args:
-        ranges: List of range strings like '3-5'.
-        ingredients: List of ingredient ID strings to check.
+        merged_ranges: Sorted, merged list of (start, end) tuples.
+        ingredients: List of ingredient IDs as integers.
 
     Returns:
         Number of fresh ingredient IDs.
     """
-    range_pairs = list(ranges_to_pairs(ranges))
-
-    fresh_count = 0
-    for ingredient_id in ingredients:
-        for low, high in range_pairs:
-            if low <= int(ingredient_id) <= high:
-                fresh_count += 1
-                break
-
-    return fresh_count
+    return sum(1 for ing in ingredients if is_in_ranges(ing, merged_ranges))
 
 
-def solve_part2(ranges: list[str]) -> int:
+def solve_part2(merged_ranges: list[tuple[int, int]]) -> int:
     """
     Counts total unique IDs considered fresh across all ranges.
 
     Args:
-        ranges: List of range strings like '3-5'.
+        merged_ranges: Sorted, merged list of (start, end) tuples.
 
     Returns:
         Total count of unique fresh ingredient IDs.
     """
-    range_pairs = sorted(ranges_to_pairs(ranges))
-    merged = interval_merge(range_pairs)
-    return sum(end - start + 1 for start, end in merged)
+    return sum(end - start + 1 for start, end in merged_ranges)
 
 
 def main():
@@ -120,8 +129,12 @@ def main():
     parsed = parse_input(data)
     ranges, ingredients = structure_data(parsed)
 
-    print(f"Part 1: {solve_part1(ranges, ingredients)}")
-    print(f"Part 2: {solve_part2(ranges)}")  # Part 2 ignores ingredients
+    range_pairs = sorted(ranges_to_pairs(ranges))
+    merged_ranges = interval_merge(range_pairs)
+    ingredient_ids = [int(ing) for ing in ingredients]
+
+    print(f"Part 1: {solve_part1(merged_ranges, ingredient_ids)}")
+    print(f"Part 2: {solve_part2(merged_ranges)}")
 
 
 if __name__ == "__main__":
