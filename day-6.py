@@ -42,40 +42,38 @@ def get_number_horizontal(board: list[str], col: int, row: int, end: int) -> int
     return num
 
 
-def get_number_vertical(board: list[str], col: int, num_rows: int) -> int:
+def get_number_vertical(board: list[str], col: int) -> int:
     """
     Reads a number vertically from top to bottom within a column.
 
     Args:
         board: The puzzle board.
         col: Column index.
-        num_rows: Number of rows to read.
 
     Returns:
         The parsed integer value.
     """
     num = 0
-    for row in range(num_rows):
+    for row in range(len(board)):
         if board[row][col] != " ":
             num = num * 10 + int(board[row][col])
     return num
 
 
-def find_problem_end(board: list[str], start_col: int, num_rows: int) -> int:
+def find_problem_end(board: list[str], start_col: int) -> int:
     """
     Finds the ending column of a problem (first all-space column or end of board).
 
     Args:
         board: The puzzle board.
         start_col: Starting column index.
-        num_rows: Number of rows in the board.
 
     Returns:
         The ending column index (exclusive).
     """
     n = len(board[0])
     end = start_col
-    for row in range(num_rows):
+    for row in range(len(board)):
         idx = board[row].find(" ", start_col)
         end = max(end, idx if idx != -1 else n)
     return end
@@ -95,13 +93,14 @@ def solve_part1(board: list[str], operations: list[str]) -> int:
     Returns:
         Grand total of all problem answers.
     """
-    num_rows = len(board)
     col = 0
     totals = []
 
     for operation in operations:
-        end = find_problem_end(board, col, num_rows)
-        nums = [get_number_horizontal(board, col, row, end) for row in range(num_rows)]
+        end = find_problem_end(board, col)
+        nums = [
+            get_number_horizontal(board, col, row, end) for row in range(len(board))
+        ]
 
         if operation == "*":
             totals.append(prod(nums))
@@ -127,13 +126,12 @@ def solve_part2(board: list[str], operations: list[str]) -> int:
     Returns:
         Grand total of all problem answers.
     """
-    num_rows = len(board)
     col = 0
     totals = []
 
     for operation in operations:
-        end = find_problem_end(board, col, num_rows)
-        nums = [get_number_vertical(board, c, num_rows) for c in range(col, end)]
+        end = find_problem_end(board, col)
+        nums = [get_number_vertical(board, c) for c in range(col, end)]
 
         if operation == "*":
             totals.append(prod(nums))
