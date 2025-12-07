@@ -1,93 +1,100 @@
 """
-Advent of Code 2025 - Day 7
+Advent of Code 2025 - Day 7: Laboratories
+Analyze tachyon beam splitting through a quantum manifold.
 """
 
 
 def parse_input(data: str) -> list[str]:
     """
-    Parses the raw input data.
+    Parses the raw input data into a manifold diagram.
 
     Args:
         data: The raw input string.
 
     Returns:
-        Parsed input data.
+        List of strings representing the manifold rows.
     """
-    lines = data.strip().splitlines()
-    return lines
+    return data.strip().splitlines()
 
 
-def solve_part1(board: list[str]):
+def solve_part1(manifold: list[str]) -> int:
     """
-    Solves Part 1.
+    Counts total beam splits in the manifold.
+
+    Tachyon beams move downward and split at '^' splitters,
+    creating new beams going left and right. Uses a set to
+    track visited positions and avoid counting merged beams.
 
     Args:
-        data: The structured input data.
+        manifold: The manifold diagram.
 
     Returns:
-        Solution to Part 1.
+        Total number of times beams are split.
     """
+    start_col = manifold[0].find("S")
+    rows = len(manifold)
+    cols = len(manifold[0])
+    visited = set()
 
-    start = board[0].find("S")
-    m = len(board)
-    n = len(board[0])
-    seen = set()
-
-    def traverse(row, col) -> int:
-        if row < 0 or row >= m or col < 0 or col >= n or (row, col) in seen:
+    def traverse(row: int, col: int) -> int:
+        if row < 0 or row >= rows or col < 0 or col >= cols:
             return 0
-        seen.add((row, col))
+        if (row, col) in visited:
+            return 0
+        visited.add((row, col))
 
-        if board[row][col] == "^":
+        if manifold[row][col] == "^":
             return 1 + traverse(row, col + 1) + traverse(row, col - 1)
-        else:
-            return traverse(row + 1, col)
+        return traverse(row + 1, col)
 
-    return traverse(0, start)
+    return traverse(0, start_col)
 
 
-def solve_part2(board: list[str]):
+def solve_part2(manifold: list[str]) -> int:
     """
-    Solves Part 2.
+    Counts total timelines using many-worlds interpretation.
+
+    Each splitter creates two timelines (left and right paths).
+    Uses memoization to count paths efficiently, as the same
+    position can be reached via different timeline branches.
 
     Args:
-        data: The structured input data.
+        manifold: The manifold diagram.
 
     Returns:
-        Solution to Part 2.
+        Total number of timelines after particle completes all journeys.
     """
-    start = board[0].find("S")
-    m = len(board)
-    n = len(board[0])
-    mp = {}
+    start_col = manifold[0].find("S")
+    rows = len(manifold)
+    cols = len(manifold[0])
+    memo = {}
 
-    def traverse(row, col) -> int:
-        if row < 0 or row >= m or col < 0 or col >= n:
+    def traverse(row: int, col: int) -> int:
+        if row < 0 or row >= rows or col < 0 or col >= cols:
             return 0
-        if (row, col) in mp:
-            return mp[(row, col)]
+        if (row, col) in memo:
+            return memo[(row, col)]
 
-        if board[row][col] == "^":
-            mp[(row, col)] = 1 + traverse(row, col + 1) + traverse(row, col - 1)
-            return mp[(row, col)]
+        if manifold[row][col] == "^":
+            result = 1 + traverse(row, col + 1) + traverse(row, col - 1)
         else:
-            mp[(row, col)] = traverse(row + 1, col)
-            return mp[((row, col))]
+            result = traverse(row + 1, col)
 
-    return traverse(0, start) + 1
+        memo[(row, col)] = result
+        return result
+
+    return traverse(0, start_col) + 1
 
 
 def main():
-    with open("day-7.input.txt", "r") as f:
+    """Main entry point."""
+    with open("day-7.input.txt") as f:
         data = f.read()
 
-    parsed = parse_input(data)
+    manifold = parse_input(data)
 
-    part1_result = solve_part1(parsed)
-    print(f"Part 1: {part1_result}")
-
-    part2_result = solve_part2(parsed)
-    print(f"Part 2: {part2_result}")
+    print(f"Part 1: {solve_part1(manifold)}")
+    print(f"Part 2: {solve_part2(manifold)}")
 
 
 if __name__ == "__main__":
