@@ -1,5 +1,6 @@
 # Advent of Code inputs (per AoC guidelines, don't share)
 *.input.txt
+*.test-input.txt
 
 # Python
 __pycache__/
