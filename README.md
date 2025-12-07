@@ -4,13 +4,15 @@ My solutions for [Advent of Code 2025](https://adventofcode.com/2025) in Python.
 
 ## Progress
 
-| Day | Part 1 | Part 2 |
-|-----|--------|--------|
-| 1   | ⭐     | ⭐     |
-| 2   | ⭐     | ⭐     |
-| 3   | ⭐     | ⭐     |
-| 4   | ⭐     | ⭐     |
-| 5   | ⭐     | ⭐     |
+| Day | Part 1       | Part 2       |
+|-----|--------------|--------------|
+| 1   | ⭐ 0.70 ms   | ⭐ 0.95 ms   |
+| 2   | ⭐ 17.6 ms   | ⭐ 38.3 ms   |
+| 3   | ⭐ 1.39 ms   | ⭐ 2.84 ms   |
+| 4   | ⭐ 13.1 ms   | ⭐ 24.8 ms   |
+| 5   | ⭐ 0.25 ms   | ⭐ 0.01 ms   |
+| 6   | ⭐ 1.58 ms   | ⭐ 1.30 ms   |
+| 7   | ⭐ 0.37 ms   | ⭐ 0.62 ms   |
 
 ## Running
 
