@@ -1,50 +1,59 @@
 """
-Advent of Code 2025 - Day X
+Advent of Code 2025 - Day 6: Trash Compactor
+Help the young cephalopod solve math problems arranged in vertical columns.
 """
 
 from math import prod
 
 
-def parse_input(data: str) -> list[str]:
+def parse_input(data: str) -> tuple[list[str], list[str]]:
     """
-    Parses the raw input data.
+    Parses the raw input data into a board and operations.
 
     Args:
         data: The raw input string.
 
     Returns:
-        Parsed input data.
+        Tuple of (board rows, operations list).
     """
     lines = data.strip().splitlines()
-    return lines
+    board = lines[:-1]
+    operations = lines[-1].split()
+    return board, operations
 
 
-def structure_data(parsed: list[str]) -> list[list[str]]:
+def get_number_horizontal(board: list[str], col: int, row: int, end: int) -> int:
     """
-    Creates a board by separating cols by spaces, and rows by new lines.
+    Reads a number horizontally from left to right within a row.
 
     Args:
-        parsed: The parsed input data.
+        board: The puzzle board.
+        col: Starting column index.
+        row: Row index.
+        end: Ending column index (exclusive).
 
     Returns:
-        Board with rows and cols
+        The parsed integer value.
     """
-    board = parsed
-    operations = board.pop().split()
-
-    return (board, operations)
-
-
-def get_col_num_simple(board: list[list[str]], col: int, row: int, end: int) -> int:
     num = 0
-    while col < end:
-        if board[row][col] != " ":
-            num = num * 10 + int(board[row][col])
-        col += 1
+    for c in range(col, end):
+        if board[row][c] != " ":
+            num = num * 10 + int(board[row][c])
     return num
 
 
-def get_col_num_complex(board: list[list[str]], col: int, num_rows: int) -> int:
+def get_number_vertical(board: list[str], col: int, num_rows: int) -> int:
+    """
+    Reads a number vertically from top to bottom within a column.
+
+    Args:
+        board: The puzzle board.
+        col: Column index.
+        num_rows: Number of rows to read.
+
+    Returns:
+        The parsed integer value.
+    """
     num = 0
     for row in range(num_rows):
         if board[row][col] != " ":
@@ -52,90 +61,99 @@ def get_col_num_complex(board: list[list[str]], col: int, num_rows: int) -> int:
     return num
 
 
-def find_end_col(board: list[list[str]], start_col: int, num_rows: int) -> int:
-    end = start_col
+def find_problem_end(board: list[str], start_col: int, num_rows: int) -> int:
+    """
+    Finds the ending column of a problem (first all-space column or end of board).
+
+    Args:
+        board: The puzzle board.
+        start_col: Starting column index.
+        num_rows: Number of rows in the board.
+
+    Returns:
+        The ending column index (exclusive).
+    """
     n = len(board[0])
+    end = start_col
     for row in range(num_rows):
         idx = board[row].find(" ", start_col)
-        end = max(
-            end,
-            (idx if idx != -1 else n),
-        )
+        end = max(end, idx if idx != -1 else n)
     return end
 
 
-def solve_part1(board: list[list[str]], operations: list[str]) -> int:
+def solve_part1(board: list[str], operations: list[str]) -> int:
     """
-    Solves Part 1.
+    Solves Part 1: Read numbers horizontally within each problem.
+
+    Each problem's numbers are read left-to-right as traditional integers,
+    then combined using the operation at the bottom.
 
     Args:
-        data: The structured input data.
+        board: The puzzle board (rows of the worksheet).
+        operations: List of operators ('+' or '*') for each problem.
 
     Returns:
-        Solution to Part 1.
+        Grand total of all problem answers.
     """
-    m = len(board)
+    num_rows = len(board)
     col = 0
-    i = 0
-    num_rows = m
     totals = []
-    while i < len(operations):
-        end = find_end_col(board, col, num_rows)
-        operation = operations[i]
-        nums = []
-        for row in range(num_rows):
-            nums.append(get_col_num_simple(board, col, row, end))
+
+    for operation in operations:
+        end = find_problem_end(board, col, num_rows)
+        nums = [get_number_horizontal(board, col, row, end) for row in range(num_rows)]
+
         if operation == "*":
             totals.append(prod(nums))
         else:
             totals.append(sum(nums))
+
         col = end + 1
-        i += 1
+
     return sum(totals)
 
 
-def solve_part2(board: list[list[str]], operations: list[str]) -> int:
+def solve_part2(board: list[str], operations: list[str]) -> int:
     """
-    Solves Part 2.
+    Solves Part 2: Read numbers vertically (cephalopod math).
+
+    Each column within a problem represents a separate number,
+    read top-to-bottom with the most significant digit at the top.
 
     Args:
-        data: The structured input data.
+        board: The puzzle board (rows of the worksheet).
+        operations: List of operators ('+' or '*') for each problem.
 
     Returns:
-        Solution to Part 2.
+        Grand total of all problem answers.
     """
-    m = len(board)
+    num_rows = len(board)
     col = 0
-    i = 0
-    num_rows = m
     totals = []
-    while i < len(operations):
-        end = find_end_col(board, col, num_rows)
-        operation = operations[i]
-        nums = []
-        for col in range(col, end):
-            nums.append(get_col_num_complex(board, col, num_rows))
+
+    for operation in operations:
+        end = find_problem_end(board, col, num_rows)
+        nums = [get_number_vertical(board, c, num_rows) for c in range(col, end)]
+
         if operation == "*":
             totals.append(prod(nums))
         else:
             totals.append(sum(nums))
+
         col = end + 1
-        i += 1
+
     return sum(totals)
 
 
 def main():
-    with open("day-6.input.txt", "r") as f:
+    """Main entry point."""
+    with open("day-6.input.txt") as f:
         data = f.read()
 
-    parsed = parse_input(data)
-    board, operations = structure_data(parsed)
+    board, operations = parse_input(data)
 
-    part1_result = solve_part1(board, operations)
-    print(f"Part 1: {part1_result}")
-
-    part2_result = solve_part2(board, operations)
-    print(f"Part 2: {part2_result}")
+    print(f"Part 1: {solve_part1(board, operations)}")
+    print(f"Part 2: {solve_part2(board, operations)}")
 
 
 if __name__ == "__main__":
