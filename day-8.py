@@ -100,10 +100,41 @@ def solve_part1(junction_boxes: list[tuple[int, int, int]], closest_n: int) -> i
     return math.prod(largest)
 
 
+def find_closest_node(in_mst: list[bool], min_dist: list[float]) -> int:
+    """Finds the non-MST node with minimum distance to MST."""
+    best_dist = float("inf")
+    best_node = -1
+    for j in range(len(in_mst)):
+        if not in_mst[j] and min_dist[j] < best_dist:
+            best_dist = min_dist[j]
+            best_node = j
+    return best_node
+
+
+def update_distances(
+    junction_boxes: list[tuple[int, int, int]],
+    new_node: int,
+    in_mst: list[bool],
+    min_dist: list[float],
+    min_from: list[int],
+) -> None:
+    """Updates minimum distances after adding a new node to MST."""
+    pb = junction_boxes[new_node]
+    for j in range(len(junction_boxes)):
+        if not in_mst[j]:
+            d = math.dist(pb, junction_boxes[j])
+            if d < min_dist[j]:
+                min_dist[j] = d
+                min_from[j] = new_node
+
+
 def solve_part2(junction_boxes: list[tuple[int, int, int]]) -> int:
     """
     Builds MST using Prim's algorithm and returns the product
     of the X coordinates of the final edge added.
+
+    Compares two starting points and chooses the one with a closer neighbor
+    to avoid starting from an isolated/furthest node.
 
     Args:
         junction_boxes: Coordinates of each junction box.
@@ -115,25 +146,32 @@ def solve_part2(junction_boxes: list[tuple[int, int, int]]) -> int:
     if n <= 1:
         return 0
 
+    if n == 1:
+        ax, _, _ = junction_boxes[0]
+        return ax * ax
+
+    # Compare two candidate starting nodes - pick the one with closer neighbors
+    p0, p1 = junction_boxes[0], junction_boxes[1]
+    min_dist_0 = min(math.dist(p0, junction_boxes[j]) for j in range(1, n))
+    min_dist_1 = min(math.dist(p1, junction_boxes[j]) for j in range(n) if j != 1)
+    start_node = 0 if min_dist_0 <= min_dist_1 else 1
+
     INF = float("inf")
     in_mst = [False] * n
     min_dist = [INF] * n
-    min_from = [0] * n
+    min_from = [start_node] * n
 
-    in_mst[0] = True
-    last_edge = (0, 0)
-    p0 = junction_boxes[0]
+    in_mst[start_node] = True
+    last_edge = (start_node, start_node)
+    p_start = junction_boxes[start_node]
 
-    for j in range(1, n):
-        min_dist[j] = math.dist(p0, junction_boxes[j])
+    for j in range(n):
+        if j != start_node:
+            min_dist[j] = math.dist(p_start, junction_boxes[j])
+            min_from[j] = start_node
 
     for _ in range(n - 1):
-        best_dist = INF
-        best_node = -1
-        for j in range(n):
-            if not in_mst[j] and min_dist[j] < best_dist:
-                best_dist = min_dist[j]
-                best_node = j
+        best_node = find_closest_node(in_mst, min_dist)
 
         if best_node == -1:
             break
@@ -141,13 +179,7 @@ def solve_part2(junction_boxes: list[tuple[int, int, int]]) -> int:
         in_mst[best_node] = True
         last_edge = (min_from[best_node], best_node)
 
-        pb = junction_boxes[best_node]
-        for j in range(n):
-            if not in_mst[j]:
-                d = math.dist(pb, junction_boxes[j])
-                if d < min_dist[j]:
-                    min_dist[j] = d
-                    min_from[j] = best_node
+        update_distances(junction_boxes, best_node, in_mst, min_dist, min_from)
 
     ax, _, _ = junction_boxes[last_edge[0]]
     bx, _, _ = junction_boxes[last_edge[1]]
