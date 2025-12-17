@@ -14,6 +14,7 @@ My solutions for [Advent of Code 2025](https://adventofcode.com/2025) in Python.
 | 6   | ⭐ 2.64 ms   | ⭐ 2.41 ms   |
 | 7   | ⭐ 0.38 ms   | ⭐ 0.63 ms   |
 | 8   | ⭐ 50.4 ms   | ⭐ 63.4 ms   |
+| 9   | ⭐ 18.8 ms   | ⭐ 165.85 ms |
 
 ## Running
 
