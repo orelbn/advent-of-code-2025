@@ -1,194 +1,243 @@
 """
-Advent of Code 2025 - Day 10
+Advent of Code 2025 - Day 10: Factory
+Configure indicator lights and joltage levels for factory machines.
 """
 
+# uses uv script declaration https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies
+# /// script
+# dependencies = [
+#   "z3-solver",
+# ]
+# ///
 from collections import deque
-from heapq import heappop, heappush
+import z3
 
 
 def parse_input(data: str) -> list[str]:
     """
-    Parses the raw input data
+    Parses raw input lines.
+
+    Args:
+        data: Raw puzzle input.
+
+    Returns:
+        List of input lines, one per machine.
     """
-    lines = data.strip().splitlines()
-    return lines
+    return data.strip().splitlines()
 
 
-def transform_to_lights_requirement(lights_str: str) -> list[int]:
+def parse_lights_diagram(diagram: str) -> list[int]:
     """
-    Transforms a lights requirement string into a list of integers.
+    Converts indicator light diagram to binary list.
+
+    Args:
+        diagram: String like ".##." where . = off, # = on.
+
+    Returns:
+        Binary list where 0 = off, 1 = on.
     """
-    res = []
-    for ch in lights_str:
-        if ch == ".":
-            res.append(0)
-        elif ch == "#":
-            res.append(1)
-    return res
+    return [1 if ch == "#" else 0 for ch in diagram]
 
 
-def structure_data(parsed: list[str]) -> dict[str, list]:
+def structure_data(lines: list[str]) -> dict[str, list]:
     """
-    Structures the parsed input data into a more usable format.
+    Structures parsed input into usable format.
+
+    Each line format: [lights] (btn1) (btn2) ... {joltages}
+    Example: [.##.] (3) (1,3) (2) {3,5,4,7}
+
+    Args:
+        lines: Raw input lines.
+
+    Returns:
+        Dictionary with:
+        - lights_diagrams: Target indicator states for each machine
+        - button_configs: Button wirings for each machine
+        - joltage_targets: Target joltage levels for each machine
     """
-    lights_requirements: list[int] = []
-    change_options: list[list[int]] = []
-    joltages_requirements: list[int] = []
-    for line in parsed:
-        items = line.split()
-        lights_requirements.append(transform_to_lights_requirement(items[0]))
-        options = []
-        for opt in items[1:-1]:
-            options.append([int(x) for x in opt.strip("()").split(",")])
-        change_options.append(options)
-        joltages_requirements.append([int(x) for x in items[-1].strip("{}").split(",")])
+    lights_diagrams: list[list[int]] = []
+    button_configs: list[list[list[int]]] = []
+    joltage_targets: list[list[int]] = []
+
+    for line in lines:
+        parts = line.split()
+
+        lights_diagrams.append(parse_lights_diagram(parts[0].strip("[]")))
+
+        buttons = []
+        for part in parts[1:-1]:
+            button_indices = [int(x) for x in part.strip("()").split(",")]
+            buttons.append(button_indices)
+        button_configs.append(buttons)
+
+        joltages = [int(x) for x in parts[-1].strip("{}").split(",")]
+        joltage_targets.append(joltages)
 
     return {
-        "lights_requirements": lights_requirements,
-        "change_options": change_options,
-        "joltages_requirements": joltages_requirements,
+        "lights_diagrams": lights_diagrams,
+        "button_configs": button_configs,
+        "joltage_targets": joltage_targets,
     }
 
 
-def increment_voltages(
-    current_voltages: list[int],
+def find_min_button_presses_lights(
     target: list[int],
-    switch_options: list[list[int]],
+    buttons: list[list[int]],
 ) -> int:
     """
-    Uses Dijkstra's algorithm to find the minimum number of moves required
-    to reach the target configuration from the current configuration using
-    the available switch options.
+    Finds minimum button presses to configure indicator lights using BFS.
+
+    Each button toggles specific lights between on/off. Lights start all off.
+
+    Args:
+        target: Desired light configuration (binary list).
+        buttons: List of button configurations, each containing indices to toggle.
+
+    Returns:
+        Minimum number of button presses, or None if impossible.
     """
-    if current_voltages == target:
+    num_lights = len(target)
+    initial = [0] * num_lights
+
+    if initial == target:
         return 0
 
-    seen: dict[tuple[int, ...], int] = {tuple(current_voltages): 0}
-    pq = [(0, current_voltages)]  # (moves, voltages)
+    seen: dict[tuple[int, ...], int] = {tuple(initial): 0}
+    queue = deque([(initial, 0)])
 
-    while pq:
-        moves, voltages = heappop(pq)
+    while queue:
+        lights, presses = queue.popleft()
 
-        # Skip if we've already found a better path to this state
-        key = tuple(voltages)
-        if key in seen and seen[key] < moves:
-            continue
-
-        if voltages == target:
-            return moves
-
-        for option in switch_options:
-            new_voltages = voltages[:]
-
-            # Calculate the maximum increment possible for this option
-            needed = [target[idx] - new_voltages[idx] for idx in option]
-            increment = min(needed)
-
-            # Skip if increment is non-positive (no progress)
-            if increment <= 0:
-                continue
-
-            # Apply increment
-            for idx in option:
-                new_voltages[idx] += increment
-
-            new_key = tuple(new_voltages)
-            next_moves = moves + increment
-
-            # Only explore if this is a better path to this state
-            if new_key not in seen or seen[new_key] > next_moves:
-                seen[new_key] = next_moves
-                heappush(pq, (next_moves, new_voltages))
-
-    return float("inf")  # No solution found
-
-
-def switch_lights(
-    current_lights: list[int],
-    target: list[int],
-    switch_options: list[list[int]],
-) -> int:
-    """
-    Iterative BFS to find the minimum number of moves required to reach the
-    target configuration from the current configuration using the available
-    switch options. This avoids recursion depth issues and returns the minimal
-    moves.
-    """
-    if current_lights == target:
-        return 0
-
-    seen: dict[tuple[int], int] = {tuple(current_lights): 0}
-    q = deque()
-    q.append((current_lights, 0))
-
-    while q:
-        lights, moves = q.popleft()
-        for option in switch_options:
+        for button in buttons:
             new_lights = lights[:]
-            for idx in option:
+            for idx in button:
                 new_lights[idx] = 1 - new_lights[idx]
-            key = tuple(new_lights)
-            next_moves = moves + 1
-            if key in seen and seen[key] <= next_moves:
+
+            state = tuple(new_lights)
+            next_presses = presses + 1
+
+            if state in seen and seen[state] <= next_presses:
                 continue
+
             if new_lights == target:
-                return next_moves
-            seen[key] = next_moves
-            q.append((new_lights, next_moves))
+                return next_presses
+
+            seen[state] = next_presses
+            queue.append((new_lights, next_presses))
 
     return None
 
 
-def solve_part1(lights_requirements: list[list[int]], change_options: list[list[int]]):
+def find_min_button_presses_joltage(
+    targets: list[int],
+    buttons: list[list[int]],
+) -> int:
     """
-    Solves Part 1.
-    """
-    total_moves = 0
-    for i in range(len(lights_requirements)):
-        lights_req = lights_requirements[i]
-        options = change_options[i]
-        starting_lights = [0] * len(lights_req)
-        moves = switch_lights(starting_lights, lights_req, options)
-        if moves is not None:
-            total_moves += moves
+    Finds minimum button presses to reach target joltage levels using Z3.
 
-    return total_moves
+    Each button press increases specific counter values by 1. Counters start at 0.
+
+    Args:
+        targets: Target joltage values for each counter.
+        buttons: Button configurations (which counters each button affects).
+
+    Returns:
+        Minimum total button presses, or None if impossible.
+    """
+    num_buttons = len(buttons)
+
+    optimizer = z3.Optimize()
+    press_counts = [z3.Int(f"button_{i}") for i in range(num_buttons)]
+
+    for count in press_counts:
+        optimizer.add(count >= 0)
+
+    for counter_idx, target_value in enumerate(targets):
+        contributions = sum(
+            (
+                press_counts[btn_idx]
+                for btn_idx, button in enumerate(buttons)
+                if counter_idx in button
+            ),
+            z3.IntVal(0),
+        )
+        optimizer.add(contributions == target_value)
+
+    optimizer.minimize(sum(press_counts))
+
+    if optimizer.check() == z3.sat:
+        model = optimizer.model()
+        return sum(model.eval(count).as_long() for count in press_counts)
+
+    return None
+
+
+def solve_part1(
+    lights_diagrams: list[list[int]],
+    button_configs: list[list[list[int]]],
+) -> int:
+    """
+    Solves Part 1: Configure indicator lights for all machines.
+
+    Args:
+        lights_diagrams: Target light configurations for each machine.
+        button_configs: Button wirings for each machine.
+
+    Returns:
+        Total minimum button presses across all machines.
+    """
+    total_presses = 0
+
+    for target, buttons in zip(lights_diagrams, button_configs):
+        presses = find_min_button_presses_lights(target, buttons)
+        if presses is not None:
+            total_presses += presses
+
+    return total_presses
 
 
 def solve_part2(
-    joltages_requirements: list[list[int]], change_options: list[list[int]]
-):
+    joltage_targets: list[list[int]],
+    button_configs: list[list[list[int]]],
+) -> int:
     """
-    Solves Part 2.
-    """
-    total_moves = 0
-    for i in range(len(joltages_requirements)):
-        joltages_req = joltages_requirements[i]
-        options = change_options[i]
-        starting_voltages = [0] * len(joltages_req)
-        moves = increment_voltages(starting_voltages, joltages_req, options)
-        if moves is not None:
-            total_moves += moves
+    Solves Part 2: Configure joltage levels for all machines.
 
-    return total_moves
+    Args:
+        joltage_targets: Target joltage values for each machine.
+        button_configs: Button wirings for each machine.
+
+    Returns:
+        Total minimum button presses across all machines.
+    """
+    total_presses = 0
+
+    for targets, buttons in zip(joltage_targets, button_configs):
+        presses = find_min_button_presses_joltage(targets, buttons)
+        if presses is not None:
+            total_presses += presses
+
+    return total_presses
 
 
 def main():
-    with open("day-10.input.txt", "r") as f:
+    """Main entry point."""
+    with open("day-10.input.txt") as f:
         data = f.read()
 
-    parsed = parse_input(data)
-    structured = structure_data(parsed)
+    lines = parse_input(data)
+    structured = structure_data(lines)
 
     part1_result = solve_part1(
-        structured["lights_requirements"], structured["change_options"]
+        structured["lights_diagrams"],
+        structured["button_configs"],
     )
     print(f"Part 1: {part1_result}")
 
     part2_result = solve_part2(
-        structured["joltages_requirements"], structured["change_options"]
+        structured["joltage_targets"],
+        structured["button_configs"],
     )
-
     print(f"Part 2: {part2_result}")
 
 
