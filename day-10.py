@@ -1,8 +1,9 @@
 """
-Advent of Code 2025 - Day X
+Advent of Code 2025 - Day 10
 """
 
 from collections import deque
+from heapq import heappop, heappush
 
 
 def parse_input(data: str) -> list[str]:
@@ -40,13 +41,66 @@ def structure_data(parsed: list[str]) -> dict[str, list]:
         for opt in items[1:-1]:
             options.append([int(x) for x in opt.strip("()").split(",")])
         change_options.append(options)
-        joltages_requirements.append(items[-1])
+        joltages_requirements.append([int(x) for x in items[-1].strip("{}").split(",")])
 
     return {
         "lights_requirements": lights_requirements,
         "change_options": change_options,
         "joltages_requirements": joltages_requirements,
     }
+
+
+def increment_voltages(
+    current_voltages: list[int],
+    target: list[int],
+    switch_options: list[list[int]],
+) -> int:
+    """
+    Uses Dijkstra's algorithm to find the minimum number of moves required
+    to reach the target configuration from the current configuration using
+    the available switch options.
+    """
+    if current_voltages == target:
+        return 0
+
+    seen: dict[tuple[int, ...], int] = {tuple(current_voltages): 0}
+    pq = [(0, current_voltages)]  # (moves, voltages)
+
+    while pq:
+        moves, voltages = heappop(pq)
+
+        # Skip if we've already found a better path to this state
+        key = tuple(voltages)
+        if key in seen and seen[key] < moves:
+            continue
+
+        if voltages == target:
+            return moves
+
+        for option in switch_options:
+            new_voltages = voltages[:]
+
+            # Calculate minimum increment needed across all indices
+            needed = [target[idx] - new_voltages[idx] for idx in option]
+            increment = min(needed)
+
+            # Skip if increment is non-positive (no progress)
+            if increment <= 0:
+                continue
+
+            # Apply increment
+            for idx in option:
+                new_voltages[idx] += increment
+
+            new_key = tuple(new_voltages)
+            next_moves = moves + increment
+
+            # Only explore if this is a better path to this state
+            if new_key not in seen or seen[new_key] > next_moves:
+                seen[new_key] = next_moves
+                heappush(pq, (next_moves, new_voltages))
+
+    return float("inf")  # No solution found
 
 
 def switch_lights(
@@ -85,7 +139,7 @@ def switch_lights(
     return None
 
 
-def solve_part1(lights_requirements: list[int], change_options: list[list[int]]):
+def solve_part1(lights_requirements: list[list[int]], change_options: list[list[int]]):
     """
     Solves Part 1.
     """
@@ -101,11 +155,22 @@ def solve_part1(lights_requirements: list[int], change_options: list[list[int]])
     return total_moves
 
 
-def solve_part2(data):
+def solve_part2(
+    joltages_requirements: list[list[int]], change_options: list[list[int]]
+):
     """
     Solves Part 2.
     """
-    pass
+    total_moves = 0
+    for i in range(len(joltages_requirements)):
+        joltages_req = joltages_requirements[i]
+        options = change_options[i]
+        starting_voltages = [0] * len(joltages_req)
+        moves = increment_voltages(starting_voltages, joltages_req, options)
+        if moves is not None:
+            total_moves += moves
+
+    return total_moves
 
 
 def main():
@@ -120,7 +185,10 @@ def main():
     )
     print(f"Part 1: {part1_result}")
 
-    part2_result = solve_part2(structured)
+    part2_result = solve_part2(
+        structured["joltages_requirements"], structured["change_options"]
+    )
+
     print(f"Part 2: {part2_result}")
 
 
