@@ -80,7 +80,7 @@ def increment_voltages(
         for option in switch_options:
             new_voltages = voltages[:]
 
-            # Calculate minimum increment needed across all indices
+            # Calculate the maximum increment possible for this option
             needed = [target[idx] - new_voltages[idx] for idx in option]
             increment = min(needed)
 
